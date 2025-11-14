@@ -15,16 +15,16 @@ This implements a GPT-2 model (Generative Pre-trained Transformer 2) trained ent
 The Shakespeare Dataset : We train on the complete works of William Shakespeare, saved as input.txt. This includes all his plays, sonnets, and poems.
 - File size: ~1.1 MB
 
-    class DataLoaderLite:
-        def __init__(self, B, T):
-            self.B = B  # Batch size
-            self.T = T  # Sequence length
-            
-            with open('input.txt', 'r') as f:
-                text = f.read()
-            
-            enc = tiktoken.get_encoding('gpt2')
-            self.tokens = torch.tensor(enc.encode(text))
+        class DataLoaderLite:
+            def __init__(self, B, T):
+                self.B = B  # Batch size
+                self.T = T  # Sequence length
+                
+                with open('input.txt', 'r') as f:
+                    text = f.read()
+                
+                enc = tiktoken.get_encoding('gpt2')
+                self.tokens = torch.tensor(enc.encode(text))
 
 ### Dataset Statistics
     ======================================================================
@@ -388,4 +388,28 @@ Each head can focus on different aspects (similar to multiple kernels in CNN)
 
 ### Training Loss
 <img width="518" height="463" alt="image" src="https://github.com/user-attachments/assets/96855120-98fd-4421-a63f-d8e2df596e87" />
+
+## Observation
+
+Based on your training results,this model is likely overfitting to the Shakespeare dataset.
+
+## Extremely Low Loss (0.094)
+- This is too good for a 338k token dataset
+- The model has essentially memorized the training data
+- Cross-entropy loss < 0.1 means >90% confidence in predicting exact next tokens
+
+
+## Small Dataset Size
+- 338,025 tokens ≈ 41 batches per batch size of 8,192
+- At step 1475: model has seen the data ~36 times (1475/41 ≈ 36 epochs)
+- GPT-2 was trained on 40GB of text; here we have ~1MB
+
+
+## Demo
+
+You can try the trained model interactively on Hugging Face Spaces:
+👉 https://huggingface.co/spaces/dkamat/gpt2-from-stratch
+
+<img width="1583" height="868" alt="image" src="https://github.com/user-attachments/assets/cadef640-6791-4c2e-8e69-8a0c7fe717f6" />
+
 
