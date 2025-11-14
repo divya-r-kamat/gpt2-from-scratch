@@ -389,21 +389,22 @@ Each head can focus on different aspects (similar to multiple kernels in CNN)
 ### Training Loss
 <img width="518" height="463" alt="image" src="https://github.com/user-attachments/assets/96855120-98fd-4421-a63f-d8e2df596e87" />
 
+### Trained Position Embeddings
+
+<img width="585" height="438" alt="image" src="https://github.com/user-attachments/assets/9a43d93e-8231-4248-95b8-311330899915" />
+
 ## Observation
 
 Based on your training results,this model is likely overfitting to the Shakespeare dataset.
-
-## Extremely Low Loss (0.094)
+#### Extremely Low Loss (0.094)
 - This is too good for a 338k token dataset
 - The model has essentially memorized the training data
 - Cross-entropy loss < 0.1 means >90% confidence in predicting exact next tokens
 
-
-## Small Dataset Size
+#### Small Dataset Size
 - 338,025 tokens ≈ 41 batches per batch size of 8,192
 - At step 1475: model has seen the data ~36 times (1475/41 ≈ 36 epochs)
 - GPT-2 was trained on 40GB of text; here we have ~1MB
-
 
 ## Demo
 
