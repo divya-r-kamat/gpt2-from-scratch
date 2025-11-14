@@ -197,4 +197,79 @@ GPT-2 is a decoder-only, autoregressive model. Empirically, for language modelin
 - They integrate smoothly with GPT-2’s block architecture
 
 ## Self-Attention Mechanism
+Self-attention lets each token "look at" all previous tokens to understand context. 
 
+For example:
+
+        "The cat sat on the mat because it was tired"
+                                           ↑
+                                          What does "it" refer to?
+                                          
+The attention mechanism helps the model understand that "it" refers to "cat".
+
+### Query, Key, Value Vectors
+Each token is transformed into three vectors:
+
+    kv = self.c_attn(x)  # Linear projection: [B, T, 768] → [B, T, 2304]
+    q, k, v = qkv.split(self.n_embd, dim=2)  # Split into Q, K, V
+    
+**What are Q, K, V?**
+- Query (Q): "What am I looking for?"
+- Key (K): "What information do I have?"
+- Value (V): "What information will I pass forward?" (new representation of the token)
+
+### Multi-Head Attention
+Instead of one attention mechanism, GPT-2 uses 12 parallel attention heads:
+
+    n_head = 12
+    head_dim = n_embd // n_head  # 768 / 12 = 64
+
+    # Reshape into multiple heads
+    q = q.view(B, T, n_head, head_dim).transpose(1, 2)  # [B, 12, T, 64]
+    k = k.view(B, T, n_head, head_dim).transpose(1, 2)
+    v = v.view(B, T, n_head, head_dim).transpose(1, 2)
+    
+**Why Multiple Heads?**
+Each head can focus on different aspects (similar to multiple kernels in CNN)
+
+- Head 1: Syntactic relationships (subject-verb agreement)
+- Head 2: Semantic relationships (synonyms, antonyms)
+- Head 3: Long-range dependencies (pronouns to their referents)
+... and so on
+
+### Attention Computation
+
+    # 1. Compute attention scores (how much to focus on each token)
+    att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(head_dim))
+    # Result: [B, n_head, T, T] — every token attends to every token
+    
+    # 2. Apply causal mask (can only look at past tokens)
+    att = att.masked_fill(mask == 0, float('-inf'))
+    # Ensures token at position 5 cannot see tokens 6, 7, 8, ...
+    
+    # 3. Softmax: Convert scores to probabilities
+    att = F.softmax(att, dim=-1)  # Sum to 1.0 along last dimension
+    
+    # 4. Weighted sum of values
+    y = att @ v  # [B, n_head, T, head_dim]
+    
+### Attention Score Calculation:
+
+    score(i, j) = (Q[i] · K[j]) / √64
+    
+    For token at position 3:
+    scores = [0.05, 0.15, 0.30, 0.50, -∞, -∞, ...]
+               ↑     ↑     ↑     ↑     ↑    ↑
+              pos 0  pos 1 pos 2 pos 3 pos 4 pos 5
+                                (current) (future - masked)
+
+    After softmax: [0.10, 0.20, 0.30, 0.40, 0.0, 0.0, ...]
+
+    
+### Embedding Size & Heads
+
+- Embedding dimension (n_embd): 768
+- Number of heads (n_head): 12
+- Dimension per head: 64 (768 ÷ 12)
+
+### Training
