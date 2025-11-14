@@ -272,4 +272,120 @@ Each head can focus on different aspects (similar to multiple kernels in CNN)
 - Number of heads (n_head): 12
 - Dimension per head: 64 (768 ÷ 12)
 
+## Training Configuration
+
+### Optimization
+
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=3e-4,              # Learning rate
+        betas=(0.9, 0.95),    # Momentum terms
+        weight_decay=0.1      # L2 regularization
+    )
+
+### Learning Rate Schedule:
+
+    def get_lr(step):
+        # 1. Warmup: Linear increase for first 200 steps
+        if step < warmup_steps:
+            return max_lr * (step + 1) / warmup_steps
+        
+        # 2. Cosine decay: Smooth decrease to min_lr
+        decay_ratio = (step - warmup_steps) / (max_steps - warmup_steps)
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
+        return min_lr + coeff * (max_lr - min_lr)
+
+**Why Warmup?**
+
+- Prevents large gradients at initialization
+- Helps stabilize early training
+
+**Why Cosine Decay?**
+
+- Smooth learning rate reduction
+- Better final convergence than step decay
+
+### Training Loop
+
+    for step in range(max_steps):
+        # 1. Get batch
+        x, y = train_loader.next_batch()
+        
+        # 2. Forward pass
+        logits, loss = model(x, y)
+        
+        # 3. Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        
+        # 4. Gradient clipping (prevents exploding gradients)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        
+        # 5. Update weights
+        optimizer.step()
+
+### Loss Function (Cross-Entropy Loss)
+
+    loss = F.cross_entropy(logits.view(-1, 50257), targets.view(-1))
+
 ### Training
+
+    using device: cuda
+    Model parameters: 124.44M
+    loaded 338025 tokens
+    1 epoch = 41 batches
+    
+    ======================================================================
+    TRAINING FROM SCRATCH
+    ======================================================================
+    Target: loss < 0.1
+    Max steps: 5000
+    Batch size: 32 x 256 = 8,192 tokens/batch
+    Dataset: 338,025 tokens (~41 batches per epoch)
+    ======================================================================
+    
+    step    0 | loss: 10.948163 | avg: 10.948163 | best: 10.948163 | lr: 1.50e-06 | dt: 2546ms
+    step   10 | loss: 9.169275 | avg: 9.716531 | best: 9.144935 | lr: 1.65e-05 | dt: 29ms
+    step   20 | loss: 8.678150 | avg: 8.922493 | best: 8.678150 | lr: 3.15e-05 | dt: 37ms
+    step   30 | loss: 8.388718 | avg: 8.504875 | best: 8.359287 | lr: 4.65e-05 | dt: 33ms
+    step   40 | loss: 8.000952 | avg: 8.053351 | best: 7.750473 | lr: 6.15e-05 | dt: 41ms
+    step   50 | loss: 7.270163 | avg: 7.547222 | best: 7.193012 | lr: 7.65e-05 | dt: 28ms
+    step   60 | loss: 6.699990 | avg: 7.080446 | best: 6.699990 | lr: 9.15e-05 | dt: 30ms
+    step   70 | loss: 6.385480 | avg: 6.569657 | best: 6.385480 | lr: 1.07e-04 | dt: 32ms
+    step   80 | loss: 5.910585 | avg: 6.179581 | best: 5.910585 | lr: 1.21e-04 | dt: 28ms
+    step   90 | loss: 5.654613 | avg: 5.951821 | best: 5.654613 | lr: 1.36e-04 | dt: 28ms
+    step  100 | loss: 5.758962 | avg: 5.883077 | best: 5.654613 | lr: 1.51e-04 | dt: 28ms
+    ....
+
+     Step 1400 summary:
+       Current loss: 0.181554
+       Best loss: 0.149027
+       Avg last 100: 0.264241
+       Learning rate: 2.60e-04
+    
+    step 1410 | loss: 0.167040 | avg: 0.160273 | best: 0.128597 | lr: 2.60e-04 | dt: 28ms
+    step 1420 | loss: 0.247891 | avg: 0.165310 | best: 0.128597 | lr: 2.59e-04 | dt: 28ms
+    step 1430 | loss: 0.212630 | avg: 0.191252 | best: 0.128597 | lr: 2.59e-04 | dt: 28ms
+    step 1440 | loss: 0.139345 | avg: 0.148913 | best: 0.104838 | lr: 2.58e-04 | dt: 41ms
+    step 1450 | loss: 0.111260 | avg: 0.133446 | best: 0.104838 | lr: 2.57e-04 | dt: 27ms
+    step 1460 | loss: 0.104511 | avg: 0.131384 | best: 0.104511 | lr: 2.57e-04 | dt: 28ms
+    step 1470 | loss: 0.129679 | avg: 0.144884 | best: 0.102478 | lr: 2.56e-04 | dt: 28ms
+    
+     TARGET ACHIEVED at step 1474!
+    step 1474 | loss: 0.094124 | best: 0.094124 | lr: 2.56e-04 | dt: 28ms
+    Final loss: 0.094124
+    
+    ======================================================================
+    TRAINING COMPLETED
+    ======================================================================
+    Final loss: 0.094124
+    Best loss: 0.094124
+    Total steps: 1475
+    ======================================================================
+    
+    Model saved to gpt2_checkpoint.pt
+
+
+### Training Loss
+<img width="518" height="463" alt="image" src="https://github.com/user-attachments/assets/96855120-98fd-4421-a63f-d8e2df596e87" />
+
